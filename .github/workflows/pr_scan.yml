@@ -40,7 +40,7 @@ jobs:
           echo "SARIF run count: " $(jq '.runs | length' snyk.sarif)
           jq '.runs = [.runs[0]]' snyk.sarif > snyk-single.sarif
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v4.32.0
         with:
           sarif_file: snyk.sarif
       - name: Snyk monitor
