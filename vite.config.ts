@@ -14,6 +14,7 @@ export default defineConfig({
     drop: ['console', 'debugger'], // 生产环境移除 console 和 debugger
   },
   server: {
+    https: true, // 开启 https
     port: 5173, // Port for `vite dev`
     host: '0.0.0.0', // Listen on all network interfaces
     allowedHosts: true, // 允许所有主机访问
