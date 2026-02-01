@@ -37,7 +37,7 @@ jobs:
 
       # ---- ⑤ Trivy 镜像漏洞扫描 ----
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@f781cce5aab226378ee181d764ab90ea0be3cdd8 # 0.29.0
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.29.0
         with:
           image-ref: 'ceramicraft-merchant-frontend:latest'
           format: 'sarif'
