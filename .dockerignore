@@ -1,0 +1,50 @@
+# 依赖目录
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 构建输出
+dist
+.vite
+
+# 开发工具
+.vscode
+.idea
+*.swp
+*.swo
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 环境变量文件
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志文件
+*.log
+
+# 测试覆盖率
+coverage
+.nyc_output
+
+# Git 相关
+.git
+.gitignore
+README.md
+LICENSE
+
+# Docker 相关
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# 脚本文件 (构建脚本本身不需要包含在镜像中)
+build-docker.sh
+
+# 临时文件
+.tmp
+.temp

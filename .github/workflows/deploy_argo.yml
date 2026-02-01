@@ -1,0 +1,63 @@
+name: Deploy Vue to ArgoCD (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+        version:
+            description: 'version'
+            required: false
+            default: 'latest'
+            type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: login to dockerhub
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      - name: build docker image
+        run: |
+          docker build -t "${DOCKER_HUB_USERNAME}/ceramicraft-merchant-frontend:${{ github.event.inputs.version }}" .
+      - name: push to dockerhub
+        run: |
+          docker push "${DOCKER_HUB_USERNAME}/ceramicraft-merchant-frontend:${{ github.event.inputs.version }}"
+
+  update-argocd:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout argocd deploy repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: NUS-ISS-Agile-Team/ceramicraft-argocd-deploy
+          token: ${{ secrets.PAT_TOKEN }}
+          ref: main
+          path: argocd-deploy
+      - name: Update values.yaml tag
+        run: |
+          cd argocd-deploy/vue_apps/overlays/merchant_frontend
+          TAG="${{ github.event.inputs.version }}"
+          sed -i.bak "s|^\(\s*image:\s*lian1280/ceramicraft-merchant-frontend:\).*|\1${TAG}|" patch.yaml
+          rm -f patch.yaml.bak
+      - name: Commit and push changes
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
+        run: |
+          cd argocd-deploy
+          git config user.name "${GIT_AUTHOR_NAME}"
+          git config user.email "${GIT_AUTHOR_EMAIL}"
+          git add vue_apps/overlays/merchant_frontend/patch.yaml
+          git commit -m "chore(merchant-frontend): bump tag to ${{ github.event.inputs.version }} [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:main

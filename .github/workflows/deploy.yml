@@ -1,0 +1,68 @@
+name: Deploy Vue to EC2 (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      env_name:
+        description: 'env_name'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - prod
+          - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env_name }}
+    steps:
+      - name: Set Environment Variables
+        id: set_vars
+        run: |
+          ENV_NAME="${{ github.event.inputs.env_name }}"
+          
+          if [ "$ENV_NAME" == "prod" ]; then
+            SSH_HOST_VALUE="${{ secrets.PROD_SSH_HOST }}"
+            echo "::notice title=Deployment Environment::Using PRODUCTION host."
+          elif [ "$ENV_NAME" == "dev" ]; then
+            SSH_HOST_VALUE="${{ secrets.DEV_SSH_HOST }}"
+            echo "::notice title=Deployment Environment::Using DEVELOPMENT host."
+          else
+            echo "Invalid env_name: $ENV_NAME"
+            exit 1
+          fi
+          echo "ssh_host=$SSH_HOST_VALUE" >> $GITHUB_OUTPUT
+        shell: bash
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build
+      - name: Add SSH key
+        env: 
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          CURRENT_SSH_HOST: ${{ steps.set_vars.outputs.ssh_host }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$CURRENT_SSH_HOST" >> ~/.ssh/known_hosts
+      - name: Push dist to server
+        env:
+          CURRENT_SSH_HOST: ${{ steps.set_vars.outputs.ssh_host }}
+        run: |
+          rsync -avz --delete --exclude=.git \
+            dist/ ${{ secrets.SSH_USER }}@"$CURRENT_SSH_HOST":${{ secrets.TARGET_DIR }}/
+      - name: Reload Nginx
+        env:
+          CURRENT_SSH_HOST: ${{ steps.set_vars.outputs.ssh_host }}
+        run: |
+          ssh ${{ secrets.SSH_USER }}@"$CURRENT_SSH_HOST" "docker exec nginx nginx -s reload"
