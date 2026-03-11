@@ -111,6 +111,7 @@ interface Sale {
   phone?: string
 }
 
+const BASE_URL = import.meta.env.VITE_API_URL || '/api'
 const recentSales = ref<Sale[]>([])
 const loading = ref(false)
 const errorMsg = ref('')
@@ -184,7 +185,7 @@ onMounted(async () => {
     }
   })()
   try {
-    const response = await fetch('/api/order-ms/v1/merchant/orders/list', {
+    const response = await fetch(`${BASE_URL}/order-ms/v1/merchant/orders/list`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ limit: 5, offset: 0 }),

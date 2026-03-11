@@ -129,10 +129,9 @@ const onLogin = async () => {
       }
     }
   } catch (err) {
-    alert("真实的崩溃原因: " + (err.message || err));
-    notification.error('Network error, please try again later', 'Connection Error')
-    console.error('Login error:', err)
-  }
+      console.error('Login request failed:', err);
+      notification.error('An unexpected error occurred. Please try again later.', 'Login Error');
+  } 
 }
 </script>
 

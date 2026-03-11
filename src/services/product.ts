@@ -98,7 +98,7 @@ export interface ProductListResponse {
 
 // 产品API服务类
 export class ProductAPI {
-  private static readonly BASE_URL = '/api/product-ms/v1/merchant'
+  private static readonly BASE_URL = import.meta.env.VITE_API_URL + '/product-ms/v1/merchant'
 
       /**
        * 添加商品
