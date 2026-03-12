@@ -3,7 +3,7 @@
 # 构建脚本
 # 用法: chmod +x build_dkimg.sh && ./build_dkimg.sh [tag]
 
-PROJECT_NAME="ceramicraft-merchant-frontend"
+PROJECT_NAME="cerami-craft-admin"
 TAG="${1:-latest}"
 
 echo "🚀 开始构建 Docker 镜像..."

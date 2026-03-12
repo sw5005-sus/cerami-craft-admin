@@ -81,10 +81,10 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/NUS-ISS-Agile-Team/ceramicraft-merchant-frontend.git
+git clone https://github.com/NUS-ISS-Agile-Team/cerami-craft-admin.git
 
 # 进入项目目录
-cd ceramicraft-merchant-frontend
+cd cerami-craft-admin
 
 # 安装依赖
 npm install
@@ -161,7 +161,7 @@ npm run lint
 server: {
   proxy: {
     '/api': {
-      target: 'http://ceramicraft-merchant-frontend',
+      target: 'http://cerami-craft-admin',
       changeOrigin: true,
       secure: false,
       rewrite: (path) => path.replace(/^\/api/, '')
@@ -263,17 +263,17 @@ chmod +x build_dkimg.sh
 ./build_dkimg.sh
 
 # 运行容器
-docker run -d -p 8080:8080 --name ceramicraft-merchant ceramicraft-merchant-frontend:latest
+docker run -d -p 8080:8080 --name ceramicraft-merchant cerami-craft-admin:latest
 ```
 
 #### 方式二：手动构建
 
 ```bash
 # 构建镜像
-docker build -t ceramicraft-merchant-frontend:latest .
+docker build -t cerami-craft-admin:latest .
 
 # 运行容器
-docker run -d -p 8080:8080 --name ceramicraft-merchant ceramicraft-merchant-frontend:latest
+docker run -d -p 8080:8080 --name ceramicraft-merchant cerami-craft-admin:latest
 
 # 访问应用
 # http://localhost:8080
