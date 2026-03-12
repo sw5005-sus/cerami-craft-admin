@@ -34,13 +34,13 @@
       <!-- 底部政策链接和GitHub图标 -->
       <div class="login-footer">
         <div class="policy-links">
-          <a href="https://github.com/NUS-ISS-Agile-Team/ceramicraft-merchant-frontend/blob/main/LICENSE"
+          <a href="https://github.com/NUS-ISS-Agile-Team/cerami-craft-admin/blob/main/LICENSE"
             class="policy-link">Privacy Policy</a>
-          <a href="https://github.com/NUS-ISS-Agile-Team/ceramicraft-merchant-frontend/blob/main/LICENSE"
+          <a href="https://github.com/NUS-ISS-Agile-Team/cerami-craft-admin/blob/main/LICENSE"
             class="policy-link">Terms of Use</a>
         </div>
         <div class="social-links">
-          <a href="https://github.com/NUS-ISS-Agile-Team/ceramicraft-merchant-frontend" target="_blank"
+          <a href="https://github.com/NUS-ISS-Agile-Team/cerami-craft-admin" target="_blank"
             class="github-link">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
               <path fill="currentColor"
@@ -129,10 +129,9 @@ const onLogin = async () => {
       }
     }
   } catch (err) {
-    alert("真实的崩溃原因: " + (err.message || err));
-    notification.error('Network error, please try again later', 'Connection Error')
-    console.error('Login error:', err)
-  }
+      console.error('Login request failed:', err);
+      notification.error('An unexpected error occurred. Please try again later.', 'Login Error');
+  } 
 }
 </script>
 

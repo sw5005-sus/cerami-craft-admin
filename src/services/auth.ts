@@ -4,7 +4,7 @@
  */
 
 // API基础配置
-const API_BASE_URL = '/api/user-ms/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL + '/user-ms/v1'
 const CLIENT_TYPE = 'merchant'
 
 // API响应基础类型

@@ -3,11 +3,13 @@ name: Deploy Vue to ArgoCD (manual)
 on:
   workflow_dispatch:
     inputs:
-        version:
-            description: 'version'
-            required: false
-            default: 'latest'
-            type: string
+      environment:
+        description: 'environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
 
 jobs:
   build:
@@ -24,10 +26,10 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: build docker image
         run: |
-          docker build -t "${DOCKER_HUB_USERNAME}/ceramicraft-merchant-frontend:${{ github.event.inputs.version }}" .
+          docker build -t "${DOCKER_HUB_USERNAME}/cerami-craft-admin:${{ github.event.inputs.version }}" .
       - name: push to dockerhub
         run: |
-          docker push "${DOCKER_HUB_USERNAME}/ceramicraft-merchant-frontend:${{ github.event.inputs.version }}"
+          docker push "${DOCKER_HUB_USERNAME}/cerami-craft-admin:${{ github.event.inputs.version }}"
 
   update-argocd:
     needs: build
@@ -46,7 +48,7 @@ jobs:
         run: |
           cd argocd-deploy/vue_apps/overlays/merchant_frontend
           TAG="${{ github.event.inputs.version }}"
-          sed -i.bak "s|^\(\s*image:\s*lian1280/ceramicraft-merchant-frontend:\).*|\1${TAG}|" patch.yaml
+          sed -i.bak "s|^\(\s*image:\s*lian1280/cerami-craft-admin:\).*|\1${TAG}|" patch.yaml
           rm -f patch.yaml.bak
       - name: Commit and push changes
         env:

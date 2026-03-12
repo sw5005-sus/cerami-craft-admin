@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       # ---- ③ 构建静态包 ----
       - name: Build
@@ -32,14 +32,14 @@ jobs:
       # ---- ④ 构建 Docker 镜像 ----
       - name: Build Docker Image
         run: |
-          docker build -t ceramicraft-merchant-frontend:${{ github.sha }} .
-          docker tag ceramicraft-merchant-frontend:${{ github.sha }} ceramicraft-merchant-frontend:latest
+          docker build -t cerami-craft-admin:${{ github.sha }} .
+          docker tag cerami-craft-admin:${{ github.sha }} cerami-craft-admin:latest
 
       # ---- ⑤ Trivy 镜像漏洞扫描 ----
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@f781cce5aab226378ee181d764ab90ea0be3cdd8 # 0.29.0
         with:
-          image-ref: 'ceramicraft-merchant-frontend:latest'
+          image-ref: 'cerami-craft-admin:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'

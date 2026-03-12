@@ -81,10 +81,10 @@ A modern merchant management platform for handcraft shopping website built with 
 
 ```bash
 # Clone the repository
-git clone https://github.com/NUS-ISS-Agile-Team/ceramicraft-merchant-frontend.git
+git clone https://github.com/NUS-ISS-Agile-Team/cerami-craft-admin.git
 
 # Navigate to project directory
-cd ceramicraft-merchant-frontend
+cd cerami-craft-admin
 
 # Install dependencies
 npm install
@@ -161,7 +161,7 @@ This project uses Vite's proxy feature to forward all requests starting with `/a
 server: {
   proxy: {
     '/api': {
-      target: 'http://ceramicraft-merchant-frontend',
+      target: 'http://cerami-craft-admin',
       changeOrigin: true,
       secure: false,
       rewrite: (path) => path.replace(/^\/api/, '')
@@ -263,17 +263,17 @@ chmod +x build_dkimg.sh
 ./build_dkimg.sh
 
 # Run container
-docker run -d -p 8080:8080 --name ceramicraft-merchant ceramicraft-merchant-frontend:latest
+docker run -d -p 8080:8080 --name ceramicraft-merchant cerami-craft-admin:latest
 ```
 
 #### Option 2: Manual Build
 
 ```bash
 # Build image
-docker build -t ceramicraft-merchant-frontend:latest .
+docker build -t cerami-craft-admin:latest .
 
 # Run container
-docker run -d -p 8080:8080 --name ceramicraft-merchant ceramicraft-merchant-frontend:latest
+docker run -d -p 8080:8080 --name ceramicraft-merchant cerami-craft-admin:latest
 
 # Access application
 # http://localhost:8080
@@ -364,7 +364,7 @@ NUS-ISS Agile Team
 
 <div align="center">
 
-**[⬆ Back to Top](#ceramicraft-merchant-frontend)**
+**[⬆ Back to Top](#cerami-craft-admin)**
 
 Made with ❤️ by NUS-ISS Agile Team
 

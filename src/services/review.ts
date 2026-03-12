@@ -59,6 +59,7 @@ export interface ReplyReviewResponse extends ApiResponse {
   }
 }
 
+const BASE_URL = import.meta.env.VITE_API_URL + '/comment-ms/v1/merchant/reviews'
 /**
  * 获取评论列表
  * @param params 筛选参数
@@ -66,7 +67,7 @@ export interface ReplyReviewResponse extends ApiResponse {
  */
 export const getReviewList = async (params: ReviewListRequest = {}): Promise<ReviewListResponse> => {
   try {
-    const response = await fetch('/api/comment-ms/v1/merchant/reviews/list', {
+    const response = await fetch(`${BASE_URL}/list`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -95,7 +96,7 @@ export const getReviewList = async (params: ReviewListRequest = {}): Promise<Rev
 export const replyToReview = async (params: ReplyReviewRequest): Promise<ReplyReviewResponse> => {
   try {
     // 新API: POST /reviews/:review_id/reply
-  const response = await fetch(`/api/comment-ms/v1/merchant/reviews/${params.parentID}/replies`, {
+    const response = await fetch(`${BASE_URL}/${params.parentID}/replies`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -129,7 +130,7 @@ export const replyToReview = async (params: ReplyReviewRequest): Promise<ReplyRe
  */
 export const deleteReview = async (reviewId: string): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`/api/comment-ms/v1/merchant/review/${reviewId}`, {
+    const response = await fetch(`${BASE_URL}/${reviewId}`, {
       method: 'DELETE',
       headers: {
         'accept': 'application/json',
@@ -156,7 +157,7 @@ export const deleteReview = async (reviewId: string): Promise<ApiResponse> => {
  */
 export const togglePinReview = async (reviewId: string, isPinned: boolean): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`/api/comment-ms/v1/merchant/reviews/${reviewId}`, {
+    const response = await fetch(`${BASE_URL}/${reviewId}`, {
       method: 'PATCH',
       headers: {
         'accept': 'application/json',

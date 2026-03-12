@@ -4,7 +4,7 @@
  */
 
 // API基础配置
-const API_BASE_URL = '/api/order-ms/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL + '/order-ms/v1'
 
 // 订单状态枚举
 export enum OrderStatus {
