@@ -75,27 +75,15 @@
 /**
  * 主应用布局组件
  */
-import { useRouter } from 'vue-router'
-import { AuthAPI } from '../services/auth'
-
-const router = useRouter()
+import { logout } from '../services/auth'
 
 /**
  * 处理用户登出
+ * 全页跳转到后端 BFF oauth-logout 端点，由后端清除 HttpOnly cookie
+ * 并重定向到 ZITADEL 的 end-session 端点。
  */
-const handleLogout = async () => {
-  try {
-    await AuthAPI.logout()
-    // 清除本地存储的token
-    localStorage.removeItem('userToken')
-    // 跳转到登录页面
-    router.push('/auth/login')
-  } catch (err) {
-    console.error('Logout error:', err)
-    // 即使API调用失败，也要清除本地token并跳转
-    localStorage.removeItem('userToken')
-    router.push('/auth/login')
-  }
+const handleLogout = () => {
+  logout()
 }
 </script>
 
