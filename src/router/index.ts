@@ -62,7 +62,10 @@ const routes: Array<RouteRecordRaw> = [
     ]
   },
 
-  // 路由重定向配置
+  // 兼容后端 callback 仍重定向到旧登录路径的情况
+  { path: '/auth/login', redirect: '/' },
+
+  // 其余未匹配路由一律回首页
   { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 
