@@ -135,6 +135,33 @@ export interface OrderStatsResponse {
   total_customers: number
 }
 
+// 收单脱敏信息（包含完整的收货地址、电话等）
+export interface ReceiveInfo {
+  order_no: string
+  user_id: number
+  status: number
+  status_name: string
+  create_time: string
+  pay_time: string
+  delivery_time: string
+  confirm_time: string
+  receiver_first_name: string
+  receiver_last_name: string
+  receiver_phone: string
+  receiver_address: string
+  receiver_country: string
+  receiver_zip_code: string
+  logistics_no: string
+  pay_amount: number
+  shipping_fee: number
+  tax: number
+  total_amount: number
+  remark: string
+  update_time: string
+  order_items: OrderItemDetail[]
+  status_logs: OrderStatusLogDetail[]
+}
+
 // 订单API服务类
 export class OrderAPI {
   /**
@@ -181,6 +208,21 @@ export class OrderAPI {
       body: JSON.stringify({
         tracking_no: trackingNo
       }),
+      credentials: 'include'  // 包含cookies
+    })
+
+    return response.json()
+  }
+
+  /**
+   * 获取订单脱敏信息（收货详情）
+   * @param orderNo 订单号
+   * @returns Promise<OrderApiResponse<ReceiveInfo>>
+   */
+  static async getReceiveInfo(orderNo: string): Promise<OrderApiResponse<ReceiveInfo>> {
+    const response = await fetch(`${API_BASE_URL}/merchant/orders/${orderNo}/receive-info`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include'  // 包含cookies
     })
 

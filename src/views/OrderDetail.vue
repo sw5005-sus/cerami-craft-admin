@@ -87,6 +87,17 @@
         <div class="info-panel">
           <div class="panel-header">
             <h2>Shipping Information</h2>
+            <button 
+              @click="showReceiveInfoModal = true; loadReceiveInfo()" 
+              class="btn-view-details"
+              title="View detail"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              View Details
+            </button>
           </div>
 
           <div class="info-grid">
@@ -138,9 +149,9 @@
                 <tr v-for="item in orderDetail.order_items" :key="item.id" class="item-row">
                   <td class="product-id">{{ item.product_id }}</td>
                   <td class="product-name">{{ item.product_name }}</td>
-                  <td class="price">¥{{ OrderAPI.formatAmount(item.price) }}</td>
+                  <td class="price">S${{ OrderAPI.formatAmount(item.price) }}</td>
                   <td class="quantity">{{ item.quantity }}</td>
-                  <td class="total-price">¥{{ OrderAPI.formatAmount(item.total_price) }}</td>
+                  <td class="total-price">S${{ OrderAPI.formatAmount(item.total_price) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -156,23 +167,23 @@
           <div class="summary-grid">
             <div class="summary-row">
               <span class="summary-label">Items Total</span>
-              <span class="summary-value">¥{{ OrderAPI.formatAmount(getItemsTotal()) }}</span>
+              <span class="summary-value">S${{ OrderAPI.formatAmount(getItemsTotal()) }}</span>
             </div>
             <div class="summary-row">
               <span class="summary-label">Shipping Fee</span>
-              <span class="summary-value">¥{{ OrderAPI.formatAmount(orderDetail.shipping_fee) }}</span>
+              <span class="summary-value">S${{ OrderAPI.formatAmount(orderDetail.shipping_fee) }}</span>
             </div>
             <div class="summary-row">
               <span class="summary-label">Tax</span>
-              <span class="summary-value">¥{{ OrderAPI.formatAmount(orderDetail.tax) }}</span>
+              <span class="summary-value">S${{ OrderAPI.formatAmount(orderDetail.tax) }}</span>
             </div>
             <div class="summary-row total">
               <span class="summary-label">Order Total</span>
-              <span class="summary-value">¥{{ OrderAPI.formatAmount(orderDetail.total_amount) }}</span>
+              <span class="summary-value">S${{ OrderAPI.formatAmount(orderDetail.total_amount) }}</span>
             </div>
             <div v-if="orderDetail.pay_amount > 0" class="summary-row">
               <span class="summary-label">Amount Paid</span>
-              <span class="summary-value paid">¥{{ OrderAPI.formatAmount(orderDetail.pay_amount) }}</span>
+              <span class="summary-value paid">S${{ OrderAPI.formatAmount(orderDetail.pay_amount) }}</span>
             </div>
           </div>
         </div>
@@ -266,13 +277,161 @@
         </div>
       </div>
     </div>
+
+    <!-- Receive Info Modal 对话框 -->
+    <div v-if="showReceiveInfoModal" class="dialog-overlay" @click.self="closeReceiveInfoModal">
+      <div class="dialog-content receive-info-dialog">
+        <div class="dialog-header">
+          <h2>Detailed Shipping Information</h2>
+          <button @click="closeReceiveInfoModal" class="close-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="dialog-body">
+          <div v-if="isLoadingReceiveInfo" class="loading-state-modal">
+            <div class="loading-spinner">
+              <svg class="loading-icon" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
+                <path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+              </svg>
+            </div>
+            <p>Loading detailed information...</p>
+          </div>
+
+          <div v-else-if="receiveInfoError" class="error-alert">
+            {{ receiveInfoError }}
+          </div>
+
+          <div v-else-if="receiveInfo" class="receive-info-content">
+            <!-- 收货人信息 -->
+            <div class="info-section">
+              <h3>Recipient Information</h3>
+              <div class="info-row">
+                <span class="label">Name:</span>
+                <span class="value">{{ receiveInfo.receiver_last_name }}{{ receiveInfo.receiver_first_name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Phone:</span>
+                <span class="value">{{ receiveInfo.receiver_phone }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Country/Region:</span>
+                <span class="value">{{ receiveInfo.receiver_country }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Postal Code:</span>
+                <span class="value">{{ receiveInfo.receiver_zip_code }}</span>
+              </div>
+              <div class="info-row full-width">
+                <span class="label">Address:</span>
+                <span class="value">{{ receiveInfo.receiver_address }}</span>
+              </div>
+            </div>
+
+            <!-- 订单时间信息 -->
+            <div class="info-section">
+              <h3>Timeline</h3>
+              <div class="info-row">
+                <span class="label">Order Created:</span>
+                <span class="value">{{ OrderAPI.formatDate(receiveInfo.create_time) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Payment Time:</span>
+                <span class="value">{{ OrderAPI.formatDate(receiveInfo.pay_time) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Delivery Time:</span>
+                <span class="value">{{ OrderAPI.formatDate(receiveInfo.delivery_time) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Confirmed Time:</span>
+                <span class="value">{{ OrderAPI.formatDate(receiveInfo.confirm_time) }}</span>
+              </div>
+            </div>
+
+            <!-- 物流信息 -->
+            <div class="info-section">
+              <h3>Logistics Information</h3>
+              <div class="info-row">
+                <span class="label">Tracking Number:</span>
+                <span class="value">{{ receiveInfo.logistics_no || '-' }}</span>
+              </div>
+            </div>
+
+            <!-- 订单金额信息 -->
+            <div class="info-section">
+              <h3>Order Amount</h3>
+              <div class="info-row">
+                <span class="label">Amount Paid:</span>
+                <span class="value">S${{ OrderAPI.formatAmount(receiveInfo.pay_amount) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Shipping Fee:</span>
+                <span class="value">S${{ OrderAPI.formatAmount(receiveInfo.shipping_fee) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Tax:</span>
+                <span class="value">S${{ OrderAPI.formatAmount(receiveInfo.tax) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Total Amount:</span>
+                <span class="value total">S${{ OrderAPI.formatAmount(receiveInfo.total_amount) }}</span>
+              </div>
+            </div>
+
+            <!-- 订单备注 -->
+            <div v-if="receiveInfo.remark" class="info-section">
+              <h3>Remark</h3>
+              <p class="remark-text">{{ receiveInfo.remark }}</p>
+            </div>
+
+            <!-- 订单商品 -->
+            <div class="info-section">
+              <h3>Order Items</h3>
+              <div class="items-table-container">
+                <table class="items-table">
+                  <thead>
+                    <tr>
+                      <th>Product ID</th>
+                      <th>Product Name</th>
+                      <th>Price</th>
+                      <th>Qty</th>
+                      <th>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in receiveInfo.order_items" :key="item.id" class="item-row">
+                      <td class="product-id">{{ item.product_id }}</td>
+                      <td class="product-name">{{ item.product_name }}</td>
+                      <td class="price">S${{ OrderAPI.formatAmount(item.price) }}</td>
+                      <td class="quantity">{{ item.quantity }}</td>
+                      <td class="total-price">S${{ OrderAPI.formatAmount(item.total_price) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dialog-footer">
+          <button @click="closeReceiveInfoModal" class="btn-primary">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { OrderAPI, type OrderDetail } from '../services/order'
+import { OrderAPI, type OrderDetail, type ReceiveInfo } from '../services/order'
 
 const router = useRouter()
 const route = useRoute()
@@ -285,6 +444,10 @@ const showShipDialog = ref(false)
 const trackingNumber = ref('')
 const isShipping = ref(false)
 const shipError = ref('')
+const showReceiveInfoModal = ref(false)
+const receiveInfo = ref<ReceiveInfo | null>(null)
+const isLoadingReceiveInfo = ref(false)
+const receiveInfoError = ref('')
 
 // 计算属性
 const canShipOrder = computed(() => {
@@ -409,6 +572,35 @@ const confirmShipment = async () => {
   } finally {
     isShipping.value = false
   }
+}
+
+const loadReceiveInfo = async () => {
+  if (!orderDetail.value) return
+
+  try {
+    isLoadingReceiveInfo.value = true
+    receiveInfoError.value = ''
+    receiveInfo.value = null
+
+    const response = await OrderAPI.getReceiveInfo(orderDetail.value.order_no)
+
+    if (OrderAPI.isSuccess(response) && response.data) {
+      receiveInfo.value = response.data
+    } else {
+      throw new Error(response.error || 'Failed to fetch shipping information')
+    }
+  } catch (err) {
+    console.error('Failed to load receive info:', err)
+    receiveInfoError.value = err instanceof Error ? err.message : 'Failed to load shipping information, please try again'
+  } finally {
+    isLoadingReceiveInfo.value = false
+  }
+}
+
+const closeReceiveInfoModal = () => {
+  showReceiveInfoModal.value = false
+  receiveInfo.value = null
+  receiveInfoError.value = ''
 }
 
 // 生命周期
@@ -993,6 +1185,206 @@ onMounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Panel header button 样式 */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn-view-details {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-view-details:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-view-details:active {
+  transform: translateY(0);
+}
+
+.btn-view-details svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Receive Info Modal 样式 */
+.receive-info-dialog {
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.receive-info-dialog .dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.close-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Receive Info Content 样式 */
+.receive-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.info-section {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+}
+
+.info-section:last-child {
+  border-bottom: none;
+}
+
+.info-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.info-row.full-width {
+  flex-direction: column;
+}
+
+.info-row .label {
+  font-weight: 500;
+  color: #6b7280;
+  min-width: 140px;
+}
+
+.info-row .value {
+  color: #1f2937;
+  flex: 1;
+  text-align: right;
+  word-break: break-word;
+}
+
+.info-row.full-width .value {
+  text-align: left;
+}
+
+.info-row .value.total {
+  font-weight: 600;
+  color: #3b82f6;
+  font-size: 16px;
+}
+
+.remark-text {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 6px;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Loading state in modal */
+.loading-state-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.loading-state-modal .loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  color: #9ca3af;
+}
+
+.loading-state-modal p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .receive-info-dialog {
+    max-width: 100%;
+  }
+
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .info-row .label {
+    font-weight: 600;
+  }
+
+  .info-row .value {
+    text-align: left;
+  }
+
+  .items-table {
+    font-size: 12px;
+  }
+
+  .items-table th,
+  .items-table td {
+    padding: 8px 4px;
+  }
+}
+
 
 /* 打印样式 */
 @media print {
