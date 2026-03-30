@@ -309,7 +309,6 @@
           <div v-else-if="receiveInfo" class="receive-info-content">
             <!-- 收货人信息 -->
             <div class="info-section">
-              <h3>Recipient Information</h3>
               <div class="info-row">
                 <span class="label">Name:</span>
                 <span class="value">{{ receiveInfo.receiver_last_name }}{{ receiveInfo.receiver_first_name }}</span>
@@ -329,90 +328,6 @@
               <div class="info-row full-width">
                 <span class="label">Address:</span>
                 <span class="value">{{ receiveInfo.receiver_address }}</span>
-              </div>
-            </div>
-
-            <!-- 订单时间信息 -->
-            <div class="info-section">
-              <h3>Timeline</h3>
-              <div class="info-row">
-                <span class="label">Order Created:</span>
-                <span class="value">{{ OrderAPI.formatDate(receiveInfo.create_time) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Payment Time:</span>
-                <span class="value">{{ OrderAPI.formatDate(receiveInfo.pay_time) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Delivery Time:</span>
-                <span class="value">{{ OrderAPI.formatDate(receiveInfo.delivery_time) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Confirmed Time:</span>
-                <span class="value">{{ OrderAPI.formatDate(receiveInfo.confirm_time) }}</span>
-              </div>
-            </div>
-
-            <!-- 物流信息 -->
-            <div class="info-section">
-              <h3>Logistics Information</h3>
-              <div class="info-row">
-                <span class="label">Tracking Number:</span>
-                <span class="value">{{ receiveInfo.logistics_no || '-' }}</span>
-              </div>
-            </div>
-
-            <!-- 订单金额信息 -->
-            <div class="info-section">
-              <h3>Order Amount</h3>
-              <div class="info-row">
-                <span class="label">Amount Paid:</span>
-                <span class="value">S${{ OrderAPI.formatAmount(receiveInfo.pay_amount) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Shipping Fee:</span>
-                <span class="value">S${{ OrderAPI.formatAmount(receiveInfo.shipping_fee) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Tax:</span>
-                <span class="value">S${{ OrderAPI.formatAmount(receiveInfo.tax) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Total Amount:</span>
-                <span class="value total">S${{ OrderAPI.formatAmount(receiveInfo.total_amount) }}</span>
-              </div>
-            </div>
-
-            <!-- 订单备注 -->
-            <div v-if="receiveInfo.remark" class="info-section">
-              <h3>Remark</h3>
-              <p class="remark-text">{{ receiveInfo.remark }}</p>
-            </div>
-
-            <!-- 订单商品 -->
-            <div class="info-section">
-              <h3>Order Items</h3>
-              <div class="items-table-container">
-                <table class="items-table">
-                  <thead>
-                    <tr>
-                      <th>Product ID</th>
-                      <th>Product Name</th>
-                      <th>Price</th>
-                      <th>Qty</th>
-                      <th>Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="item in receiveInfo.order_items" :key="item.id" class="item-row">
-                      <td class="product-id">{{ item.product_id }}</td>
-                      <td class="product-name">{{ item.product_name }}</td>
-                      <td class="price">S${{ OrderAPI.formatAmount(item.price) }}</td>
-                      <td class="quantity">{{ item.quantity }}</td>
-                      <td class="total-price">S${{ OrderAPI.formatAmount(item.total_price) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
               </div>
             </div>
           </div>
