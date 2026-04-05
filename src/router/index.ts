@@ -8,6 +8,16 @@ import type { RouteRecordRaw } from 'vue-router'
 
 import AppLayout from '../layouts/AppLayout.vue'
 import { checkAuth, login } from '../services/auth'
+import { fetchRoles, isAdmin, isEditor } from '../services/role'
+
+// Extend RouteMeta to include roles
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+    /** If set, user must have at least one of these roles to access */
+    roles?: string[]
+  }
+}
 
 /** 路由配置数组 */
 const routes: Array<RouteRecordRaw> = [
@@ -32,7 +42,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'products/add',
         name: 'AddProduct',
         component: () => import('../views/AddProduct.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, roles: ['merchant_admin', 'product_editor'] }
       },
       {
         path: 'products/:id',
@@ -45,13 +55,13 @@ const routes: Array<RouteRecordRaw> = [
         path: 'orders',
         name: 'Orders',
         component: () => import('../views/OrderList.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, roles: ['merchant_admin', 'product_editor'] }
       },
       {
         path: 'orders/:id',
         name: 'OrderDetail',
         component: () => import('../views/OrderDetail.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, roles: ['merchant_admin', 'product_editor'] }
       },
       {
         path: 'reviews',
@@ -77,6 +87,7 @@ const router = createRouter({ history: createWebHistory(), routes })
  * @description
  *  - 对 requiresAuth 路由，先用 checkAuth() 确认 session 是否有效
  *  - 如果未认证，调用 login() 做全页跳转到 ZITADEL (通过后端 BFF)
+ *  - 认证后获取角色，校验 meta.roles 权限
  */
 router.beforeEach(async (to, _from, next) => {
   // 不需要认证的路由直接放行
@@ -91,6 +102,24 @@ router.beforeEach(async (to, _from, next) => {
     // 未认证 → 重定向到 ZITADEL 登录页（全页跳转，不调用 next()）
     login()
     return
+  }
+
+  // 获取角色（首次获取后会缓存）
+  await fetchRoles()
+
+  // 校验角色权限
+  const requiredRoles = to.meta?.roles
+  if (requiredRoles && requiredRoles.length > 0) {
+    const hasPermission = isAdmin() || requiredRoles.some(role =>
+      role === 'merchant_admin' ? isAdmin() :
+      role === 'product_editor' ? isEditor() :
+      false
+    )
+    if (!hasPermission) {
+      // 无权限 → 重定向到首页
+      next('/')
+      return
+    }
   }
 
   next()

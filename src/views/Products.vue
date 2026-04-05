@@ -6,7 +6,7 @@
                 <h1>Products</h1>
                 <p class="subtitle">Manage your product inventory</p>
             </div>
-            <router-link to="/products/add" class="add-product-btn">
+            <router-link v-if="canAdd" to="/products/add" class="add-product-btn">
                 <i class="fas fa-plus"></i>
                 Add New Product
             </router-link>
@@ -49,21 +49,21 @@
 
         <!-- Products List -->
         <div v-else class="products-grid">
-            <div v-if="products.length === 0 && !isLoading" class="empty-state">
+            <div v-if="filteredProducts.length === 0 && !isLoading" class="empty-state">
                 <div class="empty-icon">
                     <i class="fas fa-box-open fa-3x"></i>
                 </div>
                 <h3>{{ hasFilters ? 'No products found' : 'No products yet' }}</h3>
                 <p>{{ hasFilters ? 'Try adjusting your search or filters.' : 'Get started by adding your first product to the inventory.' }}</p>
-                <router-link v-if="!hasFilters" to="/products/add" class="btn btn-primary">
+                <router-link v-if="!hasFilters && canAdd" to="/products/add" class="btn btn-primary">
                     Add Your First Product
                 </router-link>
-                <button v-else @click="clearFilters" class="btn btn-outline">
+                <button v-if="hasFilters" @click="clearFilters" class="btn btn-outline">
                     Clear Filters
                 </button>
             </div>
 
-            <div v-for="product in products" :key="product.id" class="product-card">
+            <div v-for="product in filteredProducts" :key="product.id" class="product-card">
                 <div class="product-image">
                     <img :src="getImageUrl(product.pic_info)" :alt="product.name" />
                     <div class="product-overlay">
@@ -80,26 +80,60 @@
                         <span class="product-stock">{{ product.stock }} in stock</span>
                     </div>
                     <div class="product-status">
-                        <span :class="['status-badge', product.status === 1 ? 'published' : 'unpublished']">
-                            {{ product.status === 1 ? 'Published' : 'Unpublished' }}
+                        <span :class="['status-badge', statusClass(product.status)]">
+                            {{ statusLabel(product.status) }}
                         </span>
                     </div>
                 </div>
                 <div class="product-actions">
-                    <button v-if="product.status === 0" @click="publishProduct(product.id!)"
-                        class="btn btn-sm btn-success" :disabled="actionLoading[product.id!]">
-                        <i class="fas fa-upload"></i>
-                        {{ actionLoading[product.id!] ? 'Publishing...' : 'Publish' }}
+                    <!-- Submit For Approval: status=0, admin/editor -->
+                    <button v-if="product.status === ProductStatus.UNPUBLISHED && canAdd"
+                        @click="submitForReview(product.id!)"
+                        class="btn btn-sm btn-primary" :disabled="actionLoading[product.id!]">
+                        <i class="fas fa-paper-plane"></i>
+                        {{ actionLoading[product.id!] ? 'Submitting...' : 'Submit For Approval' }}
                     </button>
-                    <button v-else @click="unpublishProduct(product.id!)" class="btn btn-sm btn-warning"
-                        :disabled="actionLoading[product.id!]">
+
+                    <!-- Waiting label: status=2, editor only (not admin/auditor) -->
+                    <span v-if="product.status === ProductStatus.UNDER_REVIEW && roleIsEditor && !roleIsAdmin"
+                        class="btn btn-sm btn-outline status-label">
+                        <i class="fas fa-clock"></i> Waiting For Approval
+                    </span>
+
+                    <!-- Approve & Publish: status=2, admin/auditor -->
+                    <button v-if="product.status === ProductStatus.UNDER_REVIEW && canReview"
+                        @click="approveProduct(product.id!)"
+                        class="btn btn-sm btn-success" :disabled="actionLoading[product.id!]">
+                        <i class="fas fa-check"></i>
+                        {{ actionLoading[product.id!] ? 'Approving...' : 'Approve & Publish' }}
+                    </button>
+
+                    <!-- Reject: status=2, admin/auditor -->
+                    <button v-if="product.status === ProductStatus.UNDER_REVIEW && canReview"
+                        @click="rejectProduct(product.id!)"
+                        class="btn btn-sm btn-danger" :disabled="actionLoading[product.id!]">
+                        <i class="fas fa-times"></i>
+                        {{ actionLoading[product.id!] ? 'Rejecting...' : 'Reject' }}
+                    </button>
+
+                    <!-- Unpublish: status=1, admin/editor -->
+                    <button v-if="product.status === ProductStatus.PUBLISHED && canAdd"
+                        @click="unpublishProduct(product.id!)"
+                        class="btn btn-sm btn-warning" :disabled="actionLoading[product.id!]">
                         <i class="fas fa-download"></i>
                         {{ actionLoading[product.id!] ? 'Unpublishing...' : 'Unpublish' }}
                     </button>
-                    <button @click="updateStock(product)" class="btn btn-sm btn-outline">
-                        <i class="fas fa-boxes"></i>
-                        Stock
+
+                    <!-- Stock: admin/editor -->
+                    <button v-if="canAdd" @click="updateStock(product)" class="btn btn-sm btn-outline">
+                        <i class="fas fa-boxes"></i> Stock
                     </button>
+
+                    <!-- View Only: auditor on non-reviewable products -->
+                    <span v-if="roleIsAuditor && !roleIsAdmin && product.status !== ProductStatus.UNDER_REVIEW"
+                        class="btn btn-sm btn-outline status-label">
+                        <i class="fas fa-eye"></i> View Only
+                    </span>
                 </div>
             </div>
 
@@ -121,8 +155,16 @@ import { useRouter } from 'vue-router'
 import { ProductAPI, type ProductInfo, type ProductListParams, ProductStatus } from '../services/product'
 import { notification } from '../utils/notification'
 import { handleAPIError, HTTP_STATUS } from '../services/auth'
+import { isAdmin, isEditor, isAuditor, canEditProducts, canReviewProducts } from '../services/role'
 
 const router = useRouter()
+
+// ---------- Role state ----------
+const roleIsAdmin = computed(() => isAdmin())
+const roleIsEditor = computed(() => isEditor())
+const roleIsAuditor = computed(() => isAuditor())
+const canAdd = computed(() => canEditProducts())
+const canReview = computed(() => canReviewProducts())
 
 // 产品列表数据
 const products = ref<ProductInfo[]>([])
@@ -147,6 +189,14 @@ const availableCategories = computed(() => {
     return Array.from(categories).sort()
 })
 
+// Auditor only sees status 2 (Under Review) products
+const filteredProducts = computed(() => {
+    if (roleIsAuditor.value && !roleIsAdmin.value) {
+        return products.value.filter(p => p.status === ProductStatus.UNDER_REVIEW)
+    }
+    return products.value
+})
+
 // 防抖搜索
 let searchTimeout: number | null = null
 
@@ -157,6 +207,25 @@ const actionLoading = ref<Record<number, boolean>>({})
 const hasFilters = computed(() => {
     return searchQuery.value.trim() !== '' || selectedCategory.value !== ''
 })
+
+// ---------- Status helpers ----------
+const statusLabel = (status?: ProductStatus): string => {
+    switch (status) {
+        case ProductStatus.PUBLISHED: return 'Published'
+        case ProductStatus.UNDER_REVIEW: return 'Under Review'
+        case ProductStatus.UNPUBLISHED:
+        default: return 'Unpublished'
+    }
+}
+
+const statusClass = (status?: ProductStatus): string => {
+    switch (status) {
+        case ProductStatus.PUBLISHED: return 'published'
+        case ProductStatus.UNDER_REVIEW: return 'under-review'
+        case ProductStatus.UNPUBLISHED:
+        default: return 'unpublished'
+    }
+}
 
 // 获取产品列表
 const loadProducts = async (append = false) => {
@@ -195,7 +264,6 @@ const loadProducts = async (append = false) => {
             }
 
             currentOffset.value += newProducts.length
-            // 如果返回的商品数量少于预期，说明没有更多了
             hasMore.value = newProducts.length > 0 && response.data.total > currentOffset.value
         } else {
             notification.error(handleAPIError(response, 'Failed to load products'), 'Error')
@@ -249,27 +317,21 @@ const getImageUrl = (picInfo?: string | string[]) => {
 
     let imageId = ''
 
-    // 如果是数组，获取第一张图片的ID
     if (Array.isArray(picInfo) && picInfo.length > 0) {
         imageId = picInfo[0] || ''
-    }
-    // 如果是字符串，尝试解析
-    else if (typeof picInfo === 'string') {
+    } else if (typeof picInfo === 'string') {
         try {
-            // 尝试解析JSON字符串格式的图片信息
             const imageArray = JSON.parse(picInfo)
             if (Array.isArray(imageArray) && imageArray.length > 0) {
                 imageId = imageArray[0] || ''
             }
         } catch {
-            // 如果不是JSON格式，直接使用字符串
             if (picInfo.trim()) {
                 imageId = picInfo
             }
         }
     }
 
-    // 如果有图片ID，构建完整的S3 URL
     if (imageId) {
         return `https://ceramicraft.s3.ap-southeast-1.amazonaws.com/${imageId}`
     }
@@ -281,61 +343,66 @@ const formatCategory = (category: string) => {
     return category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' ')
 }
 
-// 查看产品详情  
+// 查看产品详情
 const viewProduct = (productId: number) => {
     router.push(`/products/${productId}`)
 }
 
-// 上架产品
-const publishProduct = async (productId: number) => {
+// ---------- Product actions ----------
+
+/**
+ * Generic product action executor — eliminates duplication across
+ * submitForReview / approveProduct / rejectProduct / unpublishProduct.
+ */
+const executeAction = async (
+    productId: number,
+    apiFn: () => Promise<import('../services/auth').BaseResponse>,
+    newStatus: ProductStatus,
+    successMsg: string,
+    errorMsg: string,
+) => {
     actionLoading.value[productId] = true
     try {
-        const response = await ProductAPI.publishProduct(productId)
+        const response = await apiFn()
         if (response.code === HTTP_STATUS.OK) {
-            notification.success('Product published successfully!', 'Success')
-            // 更新本地状态
+            notification.success(successMsg, 'Success')
             const product = products.value.find(p => p.id === productId)
-            if (product) {
-                product.status = ProductStatus.PUBLISHED
-            }
+            if (product) product.status = newStatus
         } else {
-            notification.error(handleAPIError(response, 'Failed to publish product'), 'Error')
+            notification.error(handleAPIError(response, errorMsg), 'Error')
         }
     } catch (error) {
-        console.error('Error publishing product:', error)
+        console.error(`${errorMsg}:`, error)
         notification.error('Network error, please try again later', 'Connection Error')
     } finally {
         actionLoading.value[productId] = false
     }
 }
 
-// 下架产品
-const unpublishProduct = async (productId: number) => {
-    actionLoading.value[productId] = true
-    try {
-        const response = await ProductAPI.unpublishProduct(productId)
-        if (response.code === HTTP_STATUS.OK) {
-            notification.success('Product unpublished successfully!', 'Success')
-            // 更新本地状态
-            const product = products.value.find(p => p.id === productId)
-            if (product) {
-                product.status = ProductStatus.UNPUBLISHED
-            }
-        } else {
-            notification.error(handleAPIError(response, 'Failed to unpublish product'), 'Error')
-        }
-    } catch (error) {
-        console.error('Error unpublishing product:', error)
-        notification.error('Network error, please try again later', 'Connection Error')
-    } finally {
-        actionLoading.value[productId] = false
-    }
-}
+const submitForReview = (id: number) =>
+    executeAction(id, () => ProductAPI.submitForReview(id), ProductStatus.UNDER_REVIEW,
+        'Product submitted for approval!', 'Failed to submit for approval')
+
+const approveProduct = (id: number) =>
+    executeAction(id, () => ProductAPI.reviewProduct(id, 'approved'), ProductStatus.PUBLISHED,
+        'Product approved and published!', 'Failed to approve product')
+
+const rejectProduct = (id: number) =>
+    executeAction(id, () => ProductAPI.reviewProduct(id, 'rejected'), ProductStatus.UNPUBLISHED,
+        'Product rejected.', 'Failed to reject product')
+
+const unpublishProduct = (id: number) =>
+    executeAction(id, () => ProductAPI.unpublishProduct(id), ProductStatus.UNPUBLISHED,
+        'Product unpublished successfully!', 'Failed to unpublish product')
 
 // 更新库存
 const updateStock = async (product: ProductInfo) => {
     if (product.status === ProductStatus.PUBLISHED) {
         notification.warning('Please unpublish the product first before updating stock', 'Cannot Update Stock')
+        return
+    }
+    if (product.status === ProductStatus.UNDER_REVIEW) {
+        notification.warning('Cannot update stock while product is under review', 'Cannot Update Stock')
         return
     }
 
@@ -352,7 +419,6 @@ const updateStock = async (product: ProductInfo) => {
         const response = await ProductAPI.updateStock(product.id!, stockNumber)
         if (response.code === HTTP_STATUS.OK) {
             notification.success('Stock updated successfully!', 'Success')
-            // 更新本地状态
             product.stock = stockNumber
         } else {
             notification.error(handleAPIError(response, 'Failed to update stock'), 'Error')
@@ -717,10 +783,20 @@ onMounted(() => {
     color: #92400e;
 }
 
+.status-badge.under-review {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
 .product-actions {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+.status-label {
+    cursor: default;
+    opacity: 0.6;
 }
 
 .btn-success {
