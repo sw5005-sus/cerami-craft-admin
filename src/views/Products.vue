@@ -86,69 +86,54 @@
                     </div>
                 </div>
                 <div class="product-actions">
-                    <!-- ===== Admin: all actions ===== -->
-                    <template v-if="roleIsAdmin">
-                        <button v-if="product.status === ProductStatus.UNPUBLISHED" @click="submitForReview(product.id!)"
-                            class="btn btn-sm btn-primary" :disabled="actionLoading[product.id!]">
-                            <i class="fas fa-paper-plane"></i>
-                            {{ actionLoading[product.id!] ? 'Submitting...' : 'Submit For Approval' }}
-                        </button>
-                        <button v-if="product.status === ProductStatus.UNDER_REVIEW" @click="approveProduct(product.id!)"
-                            class="btn btn-sm btn-success" :disabled="actionLoading[product.id!]">
-                            <i class="fas fa-check"></i>
-                            {{ actionLoading[product.id!] ? 'Approving...' : 'Approve' }}
-                        </button>
-                        <button v-if="product.status === ProductStatus.UNDER_REVIEW" @click="rejectProduct(product.id!)"
-                            class="btn btn-sm btn-danger" :disabled="actionLoading[product.id!]">
-                            <i class="fas fa-times"></i>
-                            {{ actionLoading[product.id!] ? 'Rejecting...' : 'Reject' }}
-                        </button>
-                        <button v-if="product.status === ProductStatus.PUBLISHED" @click="unpublishProduct(product.id!)"
-                            class="btn btn-sm btn-warning" :disabled="actionLoading[product.id!]">
-                            <i class="fas fa-download"></i>
-                            {{ actionLoading[product.id!] ? 'Unpublishing...' : 'Unpublish' }}
-                        </button>
-                        <button @click="updateStock(product)" class="btn btn-sm btn-outline">
-                            <i class="fas fa-boxes"></i> Stock
-                        </button>
-                    </template>
+                    <!-- Submit For Approval: status=0, admin/editor -->
+                    <button v-if="product.status === ProductStatus.UNPUBLISHED && canAdd"
+                        @click="submitForReview(product.id!)"
+                        class="btn btn-sm btn-primary" :disabled="actionLoading[product.id!]">
+                        <i class="fas fa-paper-plane"></i>
+                        {{ actionLoading[product.id!] ? 'Submitting...' : 'Submit For Approval' }}
+                    </button>
 
-                    <!-- ===== Editor: submit / unpublish / stock ===== -->
-                    <template v-else-if="roleIsEditor">
-                        <button v-if="product.status === ProductStatus.UNPUBLISHED" @click="submitForReview(product.id!)"
-                            class="btn btn-sm btn-primary" :disabled="actionLoading[product.id!]">
-                            <i class="fas fa-paper-plane"></i>
-                            {{ actionLoading[product.id!] ? 'Submitting...' : 'Submit For Approval' }}
-                        </button>
-                        <span v-if="product.status === ProductStatus.UNDER_REVIEW" class="btn btn-sm btn-outline" style="cursor: default; opacity: 0.6;">
-                            <i class="fas fa-clock"></i> Waiting For Approval
-                        </span>
-                        <button v-if="product.status === ProductStatus.PUBLISHED" @click="unpublishProduct(product.id!)"
-                            class="btn btn-sm btn-warning" :disabled="actionLoading[product.id!]">
-                            <i class="fas fa-download"></i>
-                            {{ actionLoading[product.id!] ? 'Unpublishing...' : 'Unpublish' }}
-                        </button>
-                        <button @click="updateStock(product)" class="btn btn-sm btn-outline">
-                            <i class="fas fa-boxes"></i> Stock
-                        </button>
-                    </template>
+                    <!-- Waiting label: status=2, editor only (not admin/auditor) -->
+                    <span v-if="product.status === ProductStatus.UNDER_REVIEW && roleIsEditor && !roleIsAdmin"
+                        class="btn btn-sm btn-outline status-label">
+                        <i class="fas fa-clock"></i> Waiting For Approval
+                    </span>
 
-                    <!-- ===== Auditor: approve / reject (only for status 2) ===== -->
-                    <template v-else-if="roleIsAuditor">
-                        <button v-if="product.status === ProductStatus.UNDER_REVIEW" @click="approveProduct(product.id!)"
-                            class="btn btn-sm btn-success" :disabled="actionLoading[product.id!]">
-                            <i class="fas fa-check"></i>
-                            {{ actionLoading[product.id!] ? 'Approving...' : 'Approve & Publish' }}
-                        </button>
-                        <button v-if="product.status === ProductStatus.UNDER_REVIEW" @click="rejectProduct(product.id!)"
-                            class="btn btn-sm btn-danger" :disabled="actionLoading[product.id!]">
-                            <i class="fas fa-times"></i>
-                            {{ actionLoading[product.id!] ? 'Rejecting...' : 'Reject' }}
-                        </button>
-                        <span v-if="product.status !== ProductStatus.UNDER_REVIEW" class="btn btn-sm btn-outline" style="cursor: default; opacity: 0.6;">
-                            <i class="fas fa-eye"></i> View Only
-                        </span>
-                    </template>
+                    <!-- Approve & Publish: status=2, admin/auditor -->
+                    <button v-if="product.status === ProductStatus.UNDER_REVIEW && canReview"
+                        @click="approveProduct(product.id!)"
+                        class="btn btn-sm btn-success" :disabled="actionLoading[product.id!]">
+                        <i class="fas fa-check"></i>
+                        {{ actionLoading[product.id!] ? 'Approving...' : 'Approve & Publish' }}
+                    </button>
+
+                    <!-- Reject: status=2, admin/auditor -->
+                    <button v-if="product.status === ProductStatus.UNDER_REVIEW && canReview"
+                        @click="rejectProduct(product.id!)"
+                        class="btn btn-sm btn-danger" :disabled="actionLoading[product.id!]">
+                        <i class="fas fa-times"></i>
+                        {{ actionLoading[product.id!] ? 'Rejecting...' : 'Reject' }}
+                    </button>
+
+                    <!-- Unpublish: status=1, admin/editor -->
+                    <button v-if="product.status === ProductStatus.PUBLISHED && canAdd"
+                        @click="unpublishProduct(product.id!)"
+                        class="btn btn-sm btn-warning" :disabled="actionLoading[product.id!]">
+                        <i class="fas fa-download"></i>
+                        {{ actionLoading[product.id!] ? 'Unpublishing...' : 'Unpublish' }}
+                    </button>
+
+                    <!-- Stock: admin/editor -->
+                    <button v-if="canAdd" @click="updateStock(product)" class="btn btn-sm btn-outline">
+                        <i class="fas fa-boxes"></i> Stock
+                    </button>
+
+                    <!-- View Only: auditor on non-reviewable products -->
+                    <span v-if="roleIsAuditor && !roleIsAdmin && product.status !== ProductStatus.UNDER_REVIEW"
+                        class="btn btn-sm btn-outline status-label">
+                        <i class="fas fa-eye"></i> View Only
+                    </span>
                 </div>
             </div>
 
@@ -170,7 +155,7 @@ import { useRouter } from 'vue-router'
 import { ProductAPI, type ProductInfo, type ProductListParams, ProductStatus } from '../services/product'
 import { notification } from '../utils/notification'
 import { handleAPIError, HTTP_STATUS } from '../services/auth'
-import { isAdmin, isEditor, isAuditor, canEditProducts } from '../services/role'
+import { isAdmin, isEditor, isAuditor, canEditProducts, canReviewProducts } from '../services/role'
 
 const router = useRouter()
 
@@ -179,6 +164,7 @@ const roleIsAdmin = computed(() => isAdmin())
 const roleIsEditor = computed(() => isEditor())
 const roleIsAuditor = computed(() => isAuditor())
 const canAdd = computed(() => canEditProducts())
+const canReview = computed(() => canReviewProducts())
 
 // 产品列表数据
 const products = ref<ProductInfo[]>([])
@@ -364,93 +350,50 @@ const viewProduct = (productId: number) => {
 
 // ---------- Product actions ----------
 
-// Editor: 提交审核 (0 → 2)
-const submitForReview = async (productId: number) => {
+/**
+ * Generic product action executor — eliminates duplication across
+ * submitForReview / approveProduct / rejectProduct / unpublishProduct.
+ */
+const executeAction = async (
+    productId: number,
+    apiFn: () => Promise<import('../services/auth').BaseResponse>,
+    newStatus: ProductStatus,
+    successMsg: string,
+    errorMsg: string,
+) => {
     actionLoading.value[productId] = true
     try {
-        const response = await ProductAPI.submitForReview(productId)
+        const response = await apiFn()
         if (response.code === HTTP_STATUS.OK) {
-            notification.success('Product submitted for approval!', 'Success')
+            notification.success(successMsg, 'Success')
             const product = products.value.find(p => p.id === productId)
-            if (product) {
-                product.status = ProductStatus.UNDER_REVIEW
-            }
+            if (product) product.status = newStatus
         } else {
-            notification.error(handleAPIError(response, 'Failed to submit for approval'), 'Error')
+            notification.error(handleAPIError(response, errorMsg), 'Error')
         }
     } catch (error) {
-        console.error('Error submitting for review:', error)
+        console.error(`${errorMsg}:`, error)
         notification.error('Network error, please try again later', 'Connection Error')
     } finally {
         actionLoading.value[productId] = false
     }
 }
 
-// Auditor: 审核通过 (2 → 1)
-const approveProduct = async (productId: number) => {
-    actionLoading.value[productId] = true
-    try {
-        const response = await ProductAPI.reviewProduct(productId, 'approved')
-        if (response.code === HTTP_STATUS.OK) {
-            notification.success('Product approved and published!', 'Success')
-            const product = products.value.find(p => p.id === productId)
-            if (product) {
-                product.status = ProductStatus.PUBLISHED
-            }
-        } else {
-            notification.error(handleAPIError(response, 'Failed to approve product'), 'Error')
-        }
-    } catch (error) {
-        console.error('Error approving product:', error)
-        notification.error('Network error, please try again later', 'Connection Error')
-    } finally {
-        actionLoading.value[productId] = false
-    }
-}
+const submitForReview = (id: number) =>
+    executeAction(id, () => ProductAPI.submitForReview(id), ProductStatus.UNDER_REVIEW,
+        'Product submitted for approval!', 'Failed to submit for approval')
 
-// Auditor: 审核拒绝 (2 → 0)
-const rejectProduct = async (productId: number) => {
-    actionLoading.value[productId] = true
-    try {
-        const response = await ProductAPI.reviewProduct(productId, 'rejected')
-        if (response.code === HTTP_STATUS.OK) {
-            notification.success('Product rejected.', 'Success')
-            const product = products.value.find(p => p.id === productId)
-            if (product) {
-                product.status = ProductStatus.UNPUBLISHED
-            }
-        } else {
-            notification.error(handleAPIError(response, 'Failed to reject product'), 'Error')
-        }
-    } catch (error) {
-        console.error('Error rejecting product:', error)
-        notification.error('Network error, please try again later', 'Connection Error')
-    } finally {
-        actionLoading.value[productId] = false
-    }
-}
+const approveProduct = (id: number) =>
+    executeAction(id, () => ProductAPI.reviewProduct(id, 'approved'), ProductStatus.PUBLISHED,
+        'Product approved and published!', 'Failed to approve product')
 
-// Editor: 下架产品 (1 → 0)
-const unpublishProduct = async (productId: number) => {
-    actionLoading.value[productId] = true
-    try {
-        const response = await ProductAPI.unpublishProduct(productId)
-        if (response.code === HTTP_STATUS.OK) {
-            notification.success('Product unpublished successfully!', 'Success')
-            const product = products.value.find(p => p.id === productId)
-            if (product) {
-                product.status = ProductStatus.UNPUBLISHED
-            }
-        } else {
-            notification.error(handleAPIError(response, 'Failed to unpublish product'), 'Error')
-        }
-    } catch (error) {
-        console.error('Error unpublishing product:', error)
-        notification.error('Network error, please try again later', 'Connection Error')
-    } finally {
-        actionLoading.value[productId] = false
-    }
-}
+const rejectProduct = (id: number) =>
+    executeAction(id, () => ProductAPI.reviewProduct(id, 'rejected'), ProductStatus.UNPUBLISHED,
+        'Product rejected.', 'Failed to reject product')
+
+const unpublishProduct = (id: number) =>
+    executeAction(id, () => ProductAPI.unpublishProduct(id), ProductStatus.UNPUBLISHED,
+        'Product unpublished successfully!', 'Failed to unpublish product')
 
 // 更新库存
 const updateStock = async (product: ProductInfo) => {
@@ -849,6 +792,11 @@ onMounted(() => {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+.status-label {
+    cursor: default;
+    opacity: 0.6;
 }
 
 .btn-success {
