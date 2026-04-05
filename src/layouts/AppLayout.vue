@@ -78,7 +78,7 @@
  */
 import { computed } from 'vue'
 import { logout } from '../services/auth'
-import { isAdmin, isEditor, getRoles } from '../services/role'
+import { isAdmin, getRoles } from '../services/role'
 
 /**
  * 处理用户登出
@@ -87,11 +87,11 @@ const handleLogout = () => {
   logout()
 }
 
-/** Orders visible to admin and editor only */
-const showOrders = computed(() => isAdmin() || isEditor())
+/** Orders visible to admin only */
+const showOrders = computed(() => isAdmin())
 
-/** Reviews visible to admin and editor (auditor only reviews products) */
-const showReviews = computed(() => isAdmin() || isEditor())
+/** Reviews visible to admin only */
+const showReviews = computed(() => isAdmin())
 
 /** Display a role badge in the sidebar footer */
 const roleBadge = computed(() => {
@@ -183,7 +183,7 @@ const roleBadge = computed(() => {
 
 .nav-item.active {
   background: #fef2f2;
-  color: #dc6643;
+  color: #b94a33;
   border: 1px solid #fecaca;
 }
 
@@ -215,7 +215,7 @@ const roleBadge = computed(() => {
   gap: 12px;
   background: transparent;
   border: 1px solid #d1d5db;
-  color: #64748b;
+  color: #475569;
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 14px;
@@ -288,17 +288,11 @@ const roleBadge = computed(() => {
 
 @media (max-width: 640px) {
   .sidebar {
-    width: 100%;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
+    width: 60px;
   }
 
   .main-content {
-    margin-left: 0;
+    margin-left: 60px;
   }
 
   .logo-text {
@@ -311,11 +305,6 @@ const roleBadge = computed(() => {
 
   .logout-btn span {
     display: none;
-  }
-
-  .sidebar {
-    width: 60px;
-    transform: translateX(0);
   }
 
   .sidebar-header {
@@ -336,10 +325,6 @@ const roleBadge = computed(() => {
   .logout-btn {
     justify-content: center;
     padding: 12px 8px;
-  }
-
-  .main-content {
-    margin-left: 60px;
   }
 }
 </style>

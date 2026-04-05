@@ -55,19 +55,19 @@ const routes: Array<RouteRecordRaw> = [
         path: 'orders',
         name: 'Orders',
         component: () => import('../views/OrderList.vue'),
-        meta: { requiresAuth: true, roles: ['merchant_admin', 'product_editor'] }
+        meta: { requiresAuth: true, roles: ['merchant_admin'] }
       },
       {
         path: 'orders/:id',
         name: 'OrderDetail',
         component: () => import('../views/OrderDetail.vue'),
-        meta: { requiresAuth: true, roles: ['merchant_admin', 'product_editor'] }
+        meta: { requiresAuth: true, roles: ['merchant_admin'] }
       },
       {
         path: 'reviews',
         name: 'Reviews',
         component: () => import('../views/ReviewList.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, roles: ['merchant_admin'] }
       }
     ]
   },
