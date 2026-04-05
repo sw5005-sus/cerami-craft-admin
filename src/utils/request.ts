@@ -6,6 +6,7 @@
 
 import axios from 'axios'
 import { login, invalidateAuth } from '../services/auth'
+import { invalidateRoles } from '../services/role'
 
 /** 创建 axios 实例 */
 const request = axios.create({
@@ -23,6 +24,7 @@ request.interceptors.response.use(
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       invalidateAuth()
+      invalidateRoles()
       login() // 全页跳转，浏览器将离开当前页面
       // 返回一个永不 resolve 的 Promise，避免调用方继续执行
       return new Promise(() => {})

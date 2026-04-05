@@ -7,9 +7,13 @@ import type {BaseResponse} from './auth'
 
 // 产品状态枚举
 export enum ProductStatus {
-  UNPUBLISHED = 0,  // 未上架
-  PUBLISHED = 1     // 已上架
+  UNPUBLISHED = 0,    // 未上架 / 下架
+  PUBLISHED = 1,      // 已上架
+  UNDER_REVIEW = 2,   // 审核中
 }
+
+// 审核结果类型
+export type ReviewDecision = 'approved' | 'rejected'
 
 // 产品信息类型 - 根据API文档定义
 export interface ProductInfo {
@@ -132,23 +136,7 @@ export class ProductAPI {
   }
 
   /**
-   * 上架商品
-   * @param productId 商品ID
-   * @returns Promise<BaseResponse>
-   */
-  static async publishProduct(productId: number): Promise<BaseResponse> {
-    const response = await fetch(`${this.BASE_URL}/products/${productId}/status`, {
-      method: 'PATCH',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({status: ProductStatus.PUBLISHED}),
-      credentials: 'include'
-    })
-
-    return response.json()
-  }
-
-  /**
-   * 下架商品
+   * 下架商品（1 → 0）
    * @param productId 商品ID
    * @returns Promise<BaseResponse>
    */
@@ -389,6 +377,44 @@ export class ProductAPI {
     const response = await fetch(url, {
       method: 'GET',
       credentials: 'include'
+    })
+
+    return response.json()
+  }
+
+  /**
+   * 提交商品审核（状态 0 → 2）
+   * @param productId 商品ID
+   * @returns Promise<BaseResponse>
+   */
+  static async submitForReview(productId: number): Promise<BaseResponse> {
+    const response = await fetch(`${this.BASE_URL}/products/${productId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: ProductStatus.UNDER_REVIEW }),
+      credentials: 'include',
+    })
+
+    return response.json()
+  }
+
+  /**
+   * 审核商品（审核员操作）
+   * approved → 状态变为 1 (Published)
+   * rejected → 状态变为 0 (Unpublished)
+   * @param productId 商品ID
+   * @param decision 审核结果
+   * @returns Promise<BaseResponse>
+   */
+  static async reviewProduct(
+    productId: number,
+    decision: ReviewDecision,
+  ): Promise<BaseResponse> {
+    const response = await fetch(`${this.BASE_URL}/products/${productId}/review/${decision}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '',
+      credentials: 'include',
     })
 
     return response.json()

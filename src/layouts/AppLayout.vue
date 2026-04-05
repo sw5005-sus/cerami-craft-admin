@@ -24,7 +24,7 @@
           </svg>
           <span>Products</span>
         </router-link>
-        <router-link to="/orders" class="nav-item" active-class="active">
+        <router-link v-if="showOrders" to="/orders" class="nav-item" active-class="active">
           <svg
             width="20"
             height="20"
@@ -37,7 +37,7 @@
           </svg>
           <span>Orders</span>
         </router-link>
-        <router-link to="/reviews" class="nav-item" active-class="active">
+        <router-link v-if="showReviews" to="/reviews" class="nav-item" active-class="active">
           <svg
             width="20"
             height="20"
@@ -53,6 +53,7 @@
       </nav>
 
       <div class="sidebar-footer">
+        <div v-if="roleBadge" class="role-badge">{{ roleBadge }}</div>
         <button @click="handleLogout" class="logout-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -75,16 +76,31 @@
 /**
  * 主应用布局组件
  */
+import { computed } from 'vue'
 import { logout } from '../services/auth'
+import { isAdmin, isEditor, getRoles } from '../services/role'
 
 /**
  * 处理用户登出
- * 全页跳转到后端 BFF oauth-logout 端点，由后端清除 HttpOnly cookie
- * 并重定向到 ZITADEL 的 end-session 端点。
  */
 const handleLogout = () => {
   logout()
 }
+
+/** Orders visible to admin and editor only */
+const showOrders = computed(() => isAdmin() || isEditor())
+
+/** Reviews visible to admin and editor (auditor only reviews products) */
+const showReviews = computed(() => isAdmin() || isEditor())
+
+/** Display a role badge in the sidebar footer */
+const roleBadge = computed(() => {
+  const roles = getRoles()
+  if (roles.includes('merchant_admin')) return 'Admin'
+  if (roles.includes('product_auditor')) return 'Auditor'
+  if (roles.includes('product_editor')) return 'Editor'
+  return ''
+})
 </script>
 
 <style scoped>
@@ -178,6 +194,19 @@ const handleLogout = () => {
 .sidebar-footer {
   padding: 20px;
   border-top: 1px solid #e5e7eb;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f0f4ff;
+  color: #3b5998;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .logout-btn {
