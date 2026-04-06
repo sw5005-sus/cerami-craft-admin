@@ -47,12 +47,26 @@ export const handleAPIError = (
 
 // ---------- BFF Auth methods ----------
 
+const LOGIN_ATTEMPT_KEY = 'auth_login_attempted'
+
 /**
  * Redirect the browser to the backend BFF OAuth-login endpoint.
  * The backend will start the OIDC Authorization Code (PKCE) flow
  * and redirect the user to ZITADEL's hosted login page.
+ *
+ * A sessionStorage flag is set before redirecting. If after the
+ * redirect the session is still invalid, the caller should use
+ * {@link isLoginLooping} to detect the loop and call {@link logout}
+ * instead.
  */
 export function login(): void {
+  if (sessionStorage.getItem(LOGIN_ATTEMPT_KEY)) {
+    // Already tried once and came back still unauthenticated → break loop
+    sessionStorage.removeItem(LOGIN_ATTEMPT_KEY)
+    logout()
+    return
+  }
+  sessionStorage.setItem(LOGIN_ATTEMPT_KEY, '1')
   window.location.href = `${API_BASE_URL}/${CLIENT_TYPE}/oauth-login`
 }
 
@@ -62,6 +76,7 @@ export function login(): void {
  * optionally redirect to ZITADEL's end-session endpoint.
  */
 export function logout(): void {
+  sessionStorage.removeItem(LOGIN_ATTEMPT_KEY)
   window.location.href = `${API_BASE_URL}/${CLIENT_TYPE}/oauth-logout`
 }
 
@@ -76,6 +91,9 @@ let _isAuthenticated = false
  *
  * The result is cached for the lifetime of the page so that subsequent
  * route navigations do not trigger extra network requests.
+ *
+ * On success the login-attempt flag is cleared so future 401s can
+ * trigger a fresh login redirect.
  */
 export async function checkAuth(): Promise<boolean> {
   if (_authChecked) return _isAuthenticated
@@ -87,6 +105,12 @@ export async function checkAuth(): Promise<boolean> {
     )
     _isAuthenticated = response.status !== 401
     _authChecked = true
+
+    // Auth succeeded → clear the login-attempt flag
+    if (_isAuthenticated) {
+      sessionStorage.removeItem(LOGIN_ATTEMPT_KEY)
+    }
+
     return _isAuthenticated
   } catch {
     // Network error – assume not authenticated
