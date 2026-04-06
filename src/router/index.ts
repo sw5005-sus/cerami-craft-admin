@@ -68,7 +68,14 @@ const routes: Array<RouteRecordRaw> = [
         name: 'Reviews',
         component: () => import('../views/ReviewList.vue'),
         meta: { requiresAuth: true, roles: ['merchant_admin'] }
-      }
+      },
+      // 临时：不需要认证的审计日志页面（调试用）
+      {
+        path: 'logs',
+        name: 'AuditLogs',
+        component: () => import('../views/AuditLogs.vue'),
+        meta: { requiresAuth: true, roles: ['merchant_admin'] }
+      },
     ]
   },
 
