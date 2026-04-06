@@ -143,19 +143,7 @@
               </td>
               <td class="col-service">{{ log.service }}</td>
               <td class="col-details">
-                <div v-if="parsedDesc(log.description)" class="desc-parsed">
-                  <span :class="['method-badge', methodClass(parsedDesc(log.description)!.method)]">
-                    {{ parsedDesc(log.description)!.method }}
-                  </span>
-                  <code class="desc-path">{{ parsedDesc(log.description)!.path }}</code>
-                  <span class="desc-status-code" :class="descStatusClass(parsedDesc(log.description)!.status)">
-                    {{ parsedDesc(log.description)!.status }}
-                  </span>
-                  <div v-if="parsedDesc(log.description)!.body" class="desc-body">
-                    <code>{{ parsedDesc(log.description)!.body }}</code>
-                  </div>
-                </div>
-                <pre v-else class="desc-raw">{{ log.description }}</pre>
+                <pre class="desc-raw">{{ log.description }}</pre>
               </td>
               <td class="col-flag">
                 <span v-if="failedLogId === log.id" class="failed-badge">FAILED</span>
@@ -208,9 +196,7 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import {
   getAuditLogs,
   verifyAuditLogs,
-  parseDescription,
   type AuditLog,
-  type AuditLogDescription,
 } from '../services/auditLog'
 import { notification } from '../utils/notification'
 
@@ -255,16 +241,6 @@ const displayLogs = computed<AuditLog[]>(() => {
   return failed ? [failed, ...rest] : logs.value
 })
 
-// ---------- Description parsing cache (avoid re-parsing per render) ----------
-
-const descCache = new Map<string, AuditLogDescription | null>()
-
-function parsedDesc(raw: string): AuditLogDescription | null {
-  if (descCache.has(raw)) return descCache.get(raw)!
-  const parsed = parseDescription(raw)
-  descCache.set(raw, parsed)
-  return parsed
-}
 
 // ---------- API calls ----------
 
@@ -433,26 +409,6 @@ function roleTagClass(role: string): string {
     default:
       return ''
   }
-}
-
-function methodClass(method: string): string {
-  switch (method.toUpperCase()) {
-    case 'POST':
-      return 'method-post'
-    case 'PUT':
-    case 'PATCH':
-      return 'method-patch'
-    case 'DELETE':
-      return 'method-delete'
-    default:
-      return 'method-get'
-  }
-}
-
-function descStatusClass(status: number): string {
-  if (status >= 200 && status < 300) return 'status-ok'
-  if (status >= 400) return 'status-err'
-  return ''
 }
 
 // ---------- Lifecycle ----------
@@ -779,80 +735,6 @@ onMounted(() => {
 }
 
 /* Description */
-.desc-parsed {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  max-width: 500px;
-}
-
-.method-badge {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.method-post {
-  background: #2563eb;
-}
-
-.method-patch {
-  background: #d97706;
-}
-
-.method-delete {
-  background: #dc2626;
-}
-
-.method-get {
-  background: #059669;
-}
-
-.desc-path {
-  font-size: 13px;
-  color: #374151;
-  word-break: break-all;
-}
-
-.desc-status-code {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.status-ok {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-err {
-  background: #fef2f2;
-  color: #991b1b;
-}
-
-.desc-body {
-  width: 100%;
-  margin-top: 4px;
-}
-
-.desc-body code {
-  font-size: 12px;
-  color: #6b7280;
-  word-break: break-all;
-  background: #f3f4f6;
-  padding: 2px 6px;
-  border-radius: 4px;
-  display: inline-block;
-  max-width: 100%;
-}
 
 .desc-raw {
   font-size: 12px;
@@ -942,10 +824,6 @@ onMounted(() => {
 @media (max-width: 1024px) {
   .filters-row {
     grid-template-columns: 1fr;
-  }
-
-  .desc-parsed {
-    max-width: 300px;
   }
 }
 
