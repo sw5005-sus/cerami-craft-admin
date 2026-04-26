@@ -94,6 +94,32 @@
                     </div>
                 </div>
 
+                <!-- AI Generate Section -->
+                <div class="ai-section">
+                    <div class="ai-header">
+                        <h3 class="section-title" style="margin:0">AI Content Generation</h3>
+                        <button type="button" class="btn btn-ai" :disabled="isAiGenerating" @click="handleAiGenerate">
+                            <span v-if="isAiGenerating">Generating...</span>
+                            <span v-else>&#10024; AI Generate</span>
+                        </button>
+                    </div>
+                    <p class="ai-hint">Fill in Product Name and basic info above, then click AI Generate to auto-fill description, category, and promotional content.</p>
+                    <div v-if="aiPromotion" class="ai-result">
+                        <div class="ai-result-item">
+                            <strong>Headline:</strong> {{ aiPromotion.headline }}
+                        </div>
+                        <div class="ai-result-item">
+                            <strong>Short Text:</strong> {{ aiPromotion.short_text }}
+                        </div>
+                        <div class="ai-result-item">
+                            <strong>CTA:</strong> {{ aiPromotion.call_to_action }}
+                        </div>
+                        <div class="ai-result-item">
+                            <strong>Hashtags:</strong> {{ aiPromotion.hashtags?.join(' ') }}
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Description -->
                 <div class="form-group">
                     <label class="form-label required">Description</label>
@@ -195,6 +221,75 @@ const errors = reactive({
 
 // Form state
 const isSubmitting = ref(false)
+
+// AI generation state
+const isAiGenerating = ref(false)
+const aiPromotion = ref<any>(null)
+const AI_API_URL = import.meta.env.VITE_API_URL + '/product-agent/product'
+
+const handleAiGenerate = async () => {
+    if (!form.name.trim()) {
+        notification.error('Please enter a Product Name first', 'Missing Info')
+        return
+    }
+
+    isAiGenerating.value = true
+    aiPromotion.value = null
+
+    try {
+        const body = {
+            name: form.name,
+            category: form.category || '',
+            price: form.price ? parseFloat(form.price) * 100 : 0,
+            desc: form.desc || '',
+            stock: form.stock ? parseInt(form.stock) : 0,
+            material: form.material || '',
+            dimensions: form.dimensions || '',
+            weight: form.weight || '',
+            capacity: form.capacity || '',
+            care_instructions: form.care_instructions || '',
+            status: 0,
+            promotion_type: 'new_arrival',
+        }
+
+        const response = await fetch(`${AI_API_URL}/process`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        body: JSON.stringify(body),
+        })
+
+        if (!response.ok) {
+            throw new Error(`AI API returned ${response.status}`)
+        }
+
+        const data = await response.json()
+
+        // Auto-fill form fields from AI response
+        if (data.commodity_payload) {
+            const p = data.commodity_payload
+            if (p.category && !form.category) form.category = p.category
+            if (p.desc) form.desc = p.desc
+            if (p.material && !form.material) form.material = p.material
+            if (p.dimensions && !form.dimensions) form.dimensions = p.dimensions
+            if (p.weight && !form.weight) form.weight = p.weight
+            if (p.capacity && !form.capacity) form.capacity = p.capacity
+            if (p.care_instructions && !form.care_instructions) form.care_instructions = p.care_instructions
+        }
+
+        // Show promotion content
+        if (data.promotion) {
+            aiPromotion.value = data.promotion
+        }
+
+        notification.success('AI content generated! Description and fields auto-filled.', 'AI Generated')
+    } catch (error) {
+        console.error('AI generation failed:', error)
+        notification.error('AI generation failed. Please try again.', 'Error')
+    } finally {
+        isAiGenerating.value = false
+    }
+}
 
 // Image upload functions
 const triggerFileInput = () => {
@@ -670,6 +765,68 @@ const handleCancel = () => {
     width: 100%;
     height: auto;
     display: block;
+}
+
+/* AI Generate Section */
+.ai-section {
+    background: linear-gradient(135deg, #f0f7ff, #e8f4f8);
+    border: 1px solid #bdd8f1;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.ai-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.btn-ai {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-ai:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.btn-ai:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.ai-hint {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+}
+
+.ai-result {
+    margin-top: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.ai-result-item {
+    font-size: 13px;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.ai-result-item:last-child {
+    margin-bottom: 0;
 }
 
 .specifications-section {
