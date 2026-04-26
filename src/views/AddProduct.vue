@@ -28,11 +28,15 @@
                         <label class="form-label required">Category</label>
                         <select v-model="form.category" class="form-select" :class="{ 'error': errors.category }">
                             <option value="">Select category</option>
+                            <option value="dinnerware">Dinnerware</option>
+                            <option value="drinkware">Drinkware</option>
+                            <option value="vases_decor">Vases & Decorative</option>
+                            <option value="tea_sets">Tea & Coffee Sets</option>
+                            <option value="kitchenware">Kitchenware</option>
+                            <option value="tiles_panels">Tiles & Wall Panels</option>
+                            <option value="garden_outdoor">Garden & Outdoor</option>
                             <option value="pottery">Pottery</option>
                             <option value="ceramics">Ceramics</option>
-                            <option value="vases">Vases</option>
-                            <option value="bowls">Bowls</option>
-                            <option value="decorative">Decorative Items</option>
                         </select>
                         <span v-if="errors.category" class="error-message">{{ errors.category }}</span>
                     </div>
@@ -103,19 +107,40 @@
                             <span v-else>&#10024; AI Generate</span>
                         </button>
                     </div>
-                    <p class="ai-hint">Fill in Product Name and basic info above, then click AI Generate to auto-fill description, category, and promotional content.</p>
-                    <div v-if="aiPromotion" class="ai-result">
-                        <div class="ai-result-item">
-                            <strong>Headline:</strong> {{ aiPromotion.headline }}
+                    <p class="ai-hint">Fill in Product Name (and optionally upload an image above), then click AI Generate. Gemini will auto-fill description, category, SEO keywords, and promotional content.</p>
+                    <div v-if="aiResult" class="ai-result">
+                        <div v-if="aiResult.image_analysis?.name_suggestion" class="ai-result-block">
+                            <div class="ai-result-label">Image Analysis (Gemini Vision)</div>
+                            <div class="ai-result-item"><strong>Detected:</strong> {{ aiResult.image_analysis.name_suggestion }}</div>
+                            <div class="ai-result-item"><strong>Material:</strong> {{ aiResult.image_analysis.material }}</div>
+                            <div class="ai-result-item"><strong>Color:</strong> {{ aiResult.image_analysis.color }}</div>
+                            <div v-if="aiResult.image_analysis.description_hints" class="ai-result-item" style="margin-top:4px;font-style:italic;color:#64748b">{{ aiResult.image_analysis.description_hints }}</div>
                         </div>
-                        <div class="ai-result-item">
-                            <strong>Short Text:</strong> {{ aiPromotion.short_text }}
+                        <div v-if="aiResult.categorization" class="ai-result-block">
+                            <div class="ai-result-label">Categorization</div>
+                            <div class="ai-tags">
+                                <span class="ai-tag category">{{ aiResult.categorization.category }}</span>
+                                <span class="ai-tag style">{{ aiResult.categorization.style }}</span>
+                                <span class="ai-tag confidence">{{ (aiResult.categorization.confidence * 100).toFixed(0) }}%</span>
+                            </div>
+                            <div v-if="aiResult.categorization.tags?.length" class="ai-tags" style="margin-top:6px">
+                                <span v-for="tag in aiResult.categorization.tags" :key="tag" class="ai-tag">{{ tag }}</span>
+                            </div>
                         </div>
-                        <div class="ai-result-item">
-                            <strong>CTA:</strong> {{ aiPromotion.call_to_action }}
+                        <div v-if="aiResult.description?.seo_keywords?.length" class="ai-result-block">
+                            <div class="ai-result-label">SEO Keywords</div>
+                            <div class="ai-tags">
+                                <span v-for="kw in aiResult.description.seo_keywords" :key="kw" class="ai-tag seo">{{ kw }}</span>
+                            </div>
                         </div>
-                        <div class="ai-result-item">
-                            <strong>Hashtags:</strong> {{ aiPromotion.hashtags?.join(' ') }}
+                        <div v-if="aiPromotion" class="ai-result-block">
+                            <div class="ai-result-label">Promotion</div>
+                            <div class="ai-result-item"><strong>Headline:</strong> {{ aiPromotion.headline }}</div>
+                            <div class="ai-result-item"><strong>Short Text:</strong> {{ aiPromotion.short_text }}</div>
+                            <div class="ai-result-item"><strong>CTA:</strong> {{ aiPromotion.call_to_action }}</div>
+                            <div class="ai-tags" style="margin-top:6px">
+                                <span v-for="h in aiPromotion.hashtags" :key="h" class="ai-tag hashtag">{{ h }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -224,6 +249,7 @@ const isSubmitting = ref(false)
 
 // AI generation state
 const isAiGenerating = ref(false)
+const aiResult = ref<any>(null)
 const aiPromotion = ref<any>(null)
 const AI_API_URL = import.meta.env.VITE_API_URL + '/product-agent/product'
 
@@ -234,41 +260,66 @@ const handleAiGenerate = async () => {
     }
 
     isAiGenerating.value = true
+    aiResult.value = null
     aiPromotion.value = null
 
     try {
-        const body = {
-            name: form.name,
-            category: form.category || '',
-            price: form.price ? parseFloat(form.price) * 100 : 0,
-            desc: form.desc || '',
-            stock: form.stock ? parseInt(form.stock) : 0,
-            material: form.material || '',
-            dimensions: form.dimensions || '',
-            weight: form.weight || '',
-            capacity: form.capacity || '',
-            care_instructions: form.care_instructions || '',
-            status: 0,
-            promotion_type: 'new_arrival',
-        }
+        let response: Response
 
-        const response = await fetch(`${AI_API_URL}/process`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-        body: JSON.stringify(body),
-        })
+        if (selectedFiles.value.length > 0) {
+            const formData = new FormData()
+            formData.append('image', selectedFiles.value[0])
+            formData.append('name', form.name)
+            formData.append('desc', form.desc || '')
+            formData.append('material', form.material || '')
+            formData.append('dimensions', form.dimensions || '')
+            formData.append('weight', form.weight || '')
+            formData.append('capacity', form.capacity || '')
+            formData.append('care_instructions', form.care_instructions || '')
+            formData.append('price', form.price ? String(parseFloat(form.price) * 100) : '0')
+            formData.append('stock', form.stock ? form.stock : '0')
+            formData.append('promotion_type', 'new_arrival')
+
+            response = await fetch(`${AI_API_URL}/process-with-image`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData,
+            })
+        } else {
+            const body = {
+                name: form.name,
+                category: form.category || '',
+                price: form.price ? parseFloat(form.price) * 100 : 0,
+                desc: form.desc || '',
+                stock: form.stock ? parseInt(form.stock) : 0,
+                material: form.material || '',
+                dimensions: form.dimensions || '',
+                weight: form.weight || '',
+                capacity: form.capacity || '',
+                care_instructions: form.care_instructions || '',
+                status: 0,
+                promotion_type: 'new_arrival',
+            }
+
+            response = await fetch(`${AI_API_URL}/process`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(body),
+            })
+        }
 
         if (!response.ok) {
             throw new Error(`AI API returned ${response.status}`)
         }
 
         const data = await response.json()
+        aiResult.value = data
 
         // Auto-fill form fields from AI response
         if (data.commodity_payload) {
             const p = data.commodity_payload
-            if (p.category && !form.category) form.category = p.category
+            if (p.category) form.category = p.category
             if (p.desc) form.desc = p.desc
             if (p.material && !form.material) form.material = p.material
             if (p.dimensions && !form.dimensions) form.dimensions = p.dimensions
@@ -818,6 +869,48 @@ const handleCancel = () => {
     border-radius: 8px;
     border: 1px solid #e2e8f0;
 }
+
+.ai-result-block {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ai-result-block:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.ai-result-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6366f1;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.ai-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ai-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #f0f0ff;
+    color: #4f46e5;
+}
+
+.ai-tag.category { background: #dbeafe; color: #1e40af; }
+.ai-tag.style { background: #fef3c7; color: #92400e; }
+.ai-tag.confidence { background: #d1fae5; color: #065f46; }
+.ai-tag.seo { background: #fce7f3; color: #9d174d; }
+.ai-tag.hashtag { background: #e0e7ff; color: #3730a3; }
 
 .ai-result-item {
     font-size: 13px;
