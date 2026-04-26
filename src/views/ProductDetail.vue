@@ -150,34 +150,85 @@
             </div>
           </div>
 
+          <!-- 1. Description with paragraph formatting -->
           <div class="description-section">
             <h3>Description</h3>
-            <p class="description">{{ product.desc || 'No description available' }}</p>
+            <div v-if="product.desc" class="description-formatted">
+              <p v-for="(para, i) in descriptionParagraphs" :key="i" :class="{ 'first-para': i === 0 }">{{ para }}</p>
+            </div>
+            <p v-else class="description-empty">No description available</p>
           </div>
 
-          <!-- Product Specifications -->
+          <!-- 2. Specifications as cards -->
           <div v-if="hasSpecifications" class="specifications">
             <h3>Specifications</h3>
-            <div class="spec-grid">
-              <div v-if="product.dimensions" class="spec-item">
-                <span class="spec-label">Dimensions:</span>
-                <span class="spec-value">{{ product.dimensions }}</span>
+            <div class="spec-cards">
+              <div v-if="product.dimensions" class="spec-card">
+                <div class="spec-card-icon">&#128207;</div>
+                <div class="spec-card-label">Dimensions</div>
+                <div class="spec-card-value">{{ product.dimensions }}</div>
               </div>
-              <div v-if="product.material" class="spec-item">
-                <span class="spec-label">Material:</span>
-                <span class="spec-value">{{ product.material }}</span>
+              <div v-if="product.material" class="spec-card">
+                <div class="spec-card-icon">&#9881;</div>
+                <div class="spec-card-label">Material</div>
+                <div class="spec-card-value">{{ product.material }}</div>
               </div>
-              <div v-if="product.weight" class="spec-item">
-                <span class="spec-label">Weight:</span>
-                <span class="spec-value">{{ product.weight }}</span>
+              <div v-if="product.weight" class="spec-card">
+                <div class="spec-card-icon">&#9878;</div>
+                <div class="spec-card-label">Weight</div>
+                <div class="spec-card-value">{{ product.weight }}</div>
               </div>
-              <div v-if="product.capacity" class="spec-item">
-                <span class="spec-label">Capacity:</span>
-                <span class="spec-value">{{ product.capacity }}</span>
+              <div v-if="product.capacity" class="spec-card">
+                <div class="spec-card-icon">&#127861;</div>
+                <div class="spec-card-label">Capacity</div>
+                <div class="spec-card-value">{{ product.capacity }}</div>
               </div>
-              <div v-if="product.care_instructions" class="spec-item">
-                <span class="spec-label">Care Instructions:</span>
-                <span class="spec-value">{{ product.care_instructions }}</span>
+              <div v-if="product.care_instructions" class="spec-card full-width">
+                <div class="spec-card-icon">&#128161;</div>
+                <div class="spec-card-label">Care Instructions</div>
+                <div class="spec-card-value">{{ product.care_instructions }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. AI Insights -->
+          <div class="ai-insights-section">
+            <div class="ai-insights-header">
+              <h3>AI Insights</h3>
+              <button type="button" class="btn-ai-insights" :disabled="aiLoading" @click="generateAiInsights">
+                <span v-if="aiLoading">Analyzing...</span>
+                <span v-else>&#10024; {{ aiData ? 'Refresh' : 'Generate' }} AI Insights</span>
+              </button>
+            </div>
+            <div v-if="aiData" class="ai-insights-content">
+              <div class="ai-insight-block">
+                <div class="ai-insight-label">Categorization</div>
+                <div class="ai-insight-tags">
+                  <span class="ai-itag cat">{{ aiData.categorization?.category }}</span>
+                  <span class="ai-itag sty">{{ aiData.categorization?.style }}</span>
+                  <span class="ai-itag conf">{{ ((aiData.categorization?.confidence || 0) * 100).toFixed(0) }}% confidence</span>
+                </div>
+                <div v-if="aiData.categorization?.tags?.length" class="ai-insight-tags" style="margin-top:6px">
+                  <span v-for="tag in aiData.categorization.tags" :key="tag" class="ai-itag">{{ tag }}</span>
+                </div>
+              </div>
+              <div v-if="aiData.description?.seo_keywords?.length" class="ai-insight-block">
+                <div class="ai-insight-label">SEO Keywords</div>
+                <div class="ai-insight-tags">
+                  <span v-for="kw in aiData.description.seo_keywords" :key="kw" class="ai-itag seo">{{ kw }}</span>
+                </div>
+              </div>
+              <div v-if="aiData.promotion" class="ai-insight-block">
+                <div class="ai-insight-label">Marketing Copy</div>
+                <div class="promo-headline">{{ aiData.promotion.headline }}</div>
+                <div class="promo-short">{{ aiData.promotion.short_text }}</div>
+                <div class="promo-long">{{ aiData.promotion.long_text }}</div>
+                <div class="promo-cta-row">
+                  <span class="promo-cta-btn">{{ aiData.promotion.call_to_action }}</span>
+                </div>
+                <div v-if="aiData.promotion.hashtags?.length" class="ai-insight-tags" style="margin-top:8px">
+                  <span v-for="h in aiData.promotion.hashtags" :key="h" class="ai-itag hash">{{ h }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -375,6 +426,52 @@ const statusBadgeClass = computed(() => {
     default: return 'unpublished'
   }
 })
+
+// Description paragraphs
+const descriptionParagraphs = computed(() => {
+  if (!product.value?.desc) return []
+  return product.value.desc.split('\n').filter((p: string) => p.trim().length > 0)
+})
+
+// AI Insights state
+const aiLoading = ref(false)
+const aiData = ref<any>(null)
+const AI_API_URL = import.meta.env.VITE_API_URL + '/product-agent/product'
+
+const generateAiInsights = async () => {
+  if (!product.value) return
+  aiLoading.value = true
+  aiData.value = null
+  try {
+    const p = product.value
+    const response = await fetch(`${AI_API_URL}/process`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        name: p.name,
+        category: p.category || '',
+        price: p.price || 0,
+        desc: p.desc || '',
+        stock: p.stock || 0,
+        material: p.material || '',
+        dimensions: p.dimensions || '',
+        weight: p.weight || '',
+        capacity: p.capacity || '',
+        care_instructions: p.care_instructions || '',
+        status: 0,
+        promotion_type: 'new_arrival',
+      }),
+    })
+    if (!response.ok) throw new Error(`AI API returned ${response.status}`)
+    aiData.value = await response.json()
+  } catch (err) {
+    console.error('AI insights failed:', err)
+    showErrorNotification('AI insights generation failed')
+  } finally {
+    aiLoading.value = false
+  }
+}
 
 // Reactive state
 const product = ref<ProductInfo | null>(null)
@@ -1070,37 +1167,131 @@ onUnmounted(() => {
   color: var(--text-color);
 }
 
-.description {
-  font-size: 16px;
-  line-height: 1.6;
+/* 1. Description paragraphs */
+.description-formatted p {
+  font-size: 15px;
+  line-height: 1.7;
   color: var(--text-light);
-  margin: 0;
+  margin: 0 0 12px 0;
 }
-
-.spec-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.spec-item {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.spec-item:last-child {
-  border-bottom: none;
-}
-
-.spec-label {
-  font-weight: 600;
+.description-formatted p.first-para {
+  font-size: 16px;
+  font-weight: 500;
   color: var(--text-color);
 }
+.description-formatted p:last-child { margin-bottom: 0; }
+.description-empty { color: #9ca3af; font-style: italic; }
 
-.spec-value {
-  color: var(--text-light);
+/* 2. Specification cards */
+.spec-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.spec-card {
+  background: #f8f9fb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+}
+.spec-card.full-width { grid-column: 1 / -1; }
+.spec-card-icon { font-size: 20px; margin-bottom: 4px; }
+.spec-card-label { font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+.spec-card-value { font-size: 14px; color: #1e293b; margin-top: 2px; }
+
+/* 3. AI Insights */
+.ai-insights-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+.ai-insights-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.ai-insights-header h3 { margin: 0; }
+.btn-ai-insights {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-ai-insights:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+.btn-ai-insights:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.ai-insights-content {
+  background: linear-gradient(135deg, #f0f7ff, #f5f3ff);
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 20px;
+}
+.ai-insight-block {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ddd6fe;
+}
+.ai-insight-block:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.ai-insight-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6366f1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.ai-insight-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-itag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.ai-itag.cat { background: #dbeafe; color: #1e40af; }
+.ai-itag.sty { background: #fef3c7; color: #92400e; }
+.ai-itag.conf { background: #d1fae5; color: #065f46; }
+.ai-itag.seo { background: #fce7f3; color: #9d174d; }
+.ai-itag.hash { background: #e0e7ff; color: #3730a3; }
+
+.promo-headline {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+.promo-short {
+  font-size: 14px;
+  color: #64748b;
+  font-style: italic;
+  margin-bottom: 8px;
+}
+.promo-long {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.promo-cta-row { margin-bottom: 4px; }
+.promo-cta-btn {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: #6366f1;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* Buttons */
