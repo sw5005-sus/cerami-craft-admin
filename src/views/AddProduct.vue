@@ -268,7 +268,7 @@ const handleAiGenerate = async () => {
 
         if (selectedFiles.value.length > 0) {
             const formData = new FormData()
-            formData.append('image', selectedFiles.value[0])
+            formData.append('image', selectedFiles.value[0] as Blob)
             formData.append('name', form.name)
             formData.append('desc', form.desc || '')
             formData.append('material', form.material || '')
